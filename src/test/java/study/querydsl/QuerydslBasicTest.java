@@ -1,5 +1,6 @@
 package study.querydsl;
 
+import com.querydsl.core.QueryResults;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
@@ -82,6 +83,59 @@ public class QuerydslBasicTest {
                     .fetchOne();
 
         Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");
+
+    }
+
+    @Test
+    public void search(){
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1").and(member.age.eq(10)))
+                .fetchOne();
+
+        Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");
+
+    }
+
+    @Test
+    public void searchAndParam(){
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1"),member.age.eq(10))
+                .fetchOne();
+
+        Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");
+
+    }
+
+    @Test
+    public void resultFetch(){
+       /* List<Member> fetch = queryFactory
+                .selectFrom(member)
+                .fetch();
+
+        Member member1 = queryFactory
+                .selectFrom(member)
+                .fetchOne();
+
+        Member member2 = queryFactory
+                .selectFrom(member)
+                .fetchFirst(); */
+
+        QueryResults<Member> memberQueryResults = queryFactory
+                .selectFrom(member)
+                .fetchResults();
+
+        memberQueryResults.getTotal();
+        List<Member> members = memberQueryResults.getResults();
+
+        long total = queryFactory
+                .selectFrom(member)
+                .fetchCount();
+
+        //memberQueryResults.get
+
+        //Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");
 
     }
 }
