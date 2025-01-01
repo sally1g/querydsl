@@ -1,8 +1,11 @@
 package study.querydsl;
 
 import com.querydsl.core.QueryResults;
+import com.querydsl.core.Tuple;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.PersistenceUnit;
 import jakarta.transaction.Transactional;
 //import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Assertions;
@@ -10,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Commit;
 import study.querydsl.entity.Member;
 import study.querydsl.entity.QMember;
 import study.querydsl.entity.QTeam;
@@ -17,6 +21,7 @@ import study.querydsl.entity.Team;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static study.querydsl.entity.QMember.*;
 import static study.querydsl.entity.QTeam.team;
 
@@ -69,7 +74,7 @@ public class QuerydslBasicTest {
                 .setParameter("username", "member1")
                 .getSingleResult();
 
-        Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");
+        assertThat(findMember.getUsername()).isEqualTo("member1");
 
     }
 
@@ -86,7 +91,7 @@ public class QuerydslBasicTest {
                     .where(member.username.eq("member1"))
                     .fetchOne();
 
-        Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");
+        assertThat(findMember.getUsername()).isEqualTo("member1");
 
     }
 
@@ -97,7 +102,7 @@ public class QuerydslBasicTest {
                 .where(member.username.eq("member1").and(member.age.eq(10)))
                 .fetchOne();
 
-        Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");
+        assertThat(findMember.getUsername()).isEqualTo("member1");
 
     }
 
@@ -108,7 +113,7 @@ public class QuerydslBasicTest {
                 .where(member.username.eq("member1"),member.age.eq(10))
                 .fetchOne();
 
-        Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");
+        assertThat(findMember.getUsername()).isEqualTo("member1");
 
     }
 
@@ -156,7 +161,7 @@ public class QuerydslBasicTest {
                 .where(team.name.eq("teamA"))
                 .fetch();
 
-        Assertions.assertThat(result)
+        assertThat(result)
                 .extracting("username")
                 .containsExactly("member1","member2");
 
@@ -167,6 +172,7 @@ public class QuerydslBasicTest {
      * 회원의 이름이 팀 이름과 같은 회원 조회
      */
     @Test
+    @Commit
     public void theta_join(){
 
         em.persist(new Member("teamA"));
@@ -175,16 +181,94 @@ public class QuerydslBasicTest {
         List<Member> result = queryFactory
                 .select(member)
                 .from(member, team)
-                .where(member.username.eq("teamA"))
+                .where(member.username.eq(team.name))
                 .fetch();
 
-        Assertions.assertThat(result)
+        assertThat(result)
                 .extracting("username")
-                .containsExactly("member1","member2");
+                .containsExactly("teamA","teamB");
 
 
     }
 
 
+    /**
+     * 예) 회원과 팀을 조인하면서, 팀 이름이 teamA인 팀만 조인, 회원은 모두 조회
+     * JPQL : select m, t from Member m left join m.team t on t.name = 'teamA'
+     */
+    @Test
+    @Commit
+    public void join_on_filtering(){
+
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(member.team, team).on(team.name.eq("teamA"))
+                .fetch();
+
+        for(Tuple tuple : result){
+            System.out.println("tuple = " +tuple);
+        }
+    }
+
+    /**
+     * 연관관계 없는 엔티티 외부 조인
+     * 회원의 이름이 팀 이름과 같은 대상 외부 조인
+     */
+    @Test
+    @Commit
+    public void join_on_no_relation(){
+
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+        em.persist(new Member("teamC"));
+
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(team).on(member.username.eq(team.name))
+                .fetch();
+
+
+        for(Tuple tuple : result){
+            System.out.println("tuple = " +tuple);
+        }
+    }
+
+
+    @PersistenceUnit
+    EntityManagerFactory emf;
+
+    @Test
+    public void fetchJoinNo(){
+        em.flush();
+        em.clear();
+
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1"))
+                .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());// 로딩된 엔티티인지, 아니면 초기화 아직 안된 엔티티인지 가르쳐 준다.
+        assertThat(loaded).as("페치 조인 미적용").isFalse();
+
+    }
+
+
+    @Test
+    public void fetchJoinㅕㄴㄷ(){
+        em.flush();
+        em.clear();
+
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .join(member.team, team).fetchJoin()
+                .where(member.username.eq("member1"))
+                .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());// 로딩된 엔티티인지, 아니면 초기화 아직 안된 엔티티인지 가르쳐 준다.
+        assertThat(loaded).as("페치 조인 미적용").isTrue();
+
+    }
 
 }
