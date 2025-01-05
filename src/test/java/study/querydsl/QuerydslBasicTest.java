@@ -611,5 +611,71 @@ public class QuerydslBasicTest {
         return usernameEq(usernameCond).and(ageEq(ageCond));
     }
 
+    @Test
+    @Commit
+    public void bulkUPdate(){
+
+        // 아래 쿼리실행 후 DB데이터는 아래처럼 변경되지만
+        // 영속성 컨테스트는 변경되지 않고 남아있다.
+        //member1 = 10 -> DB 비회원
+        //member2 = 20 -> DB 비회원
+        //member3 = 30 -> DB member3
+        //member4 = 40 -> DB member4
+
+        long count = queryFactory
+                .update(member)
+                .set(member.username, "비회원")
+                .where(member.age.lt(28))
+                .execute();
+
+        // 아래처럼 초기화 해야 영속성 컨텍스트와 DB값이 일치된다.
+        em.flush();
+        em.clear();
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .fetch();
+
+        for(Member member : result){
+            System.out.println("member = " + member);
+        } 
+
+    }
+
+    @Test
+    @Commit
+    public void bulkAdd(){
+        long count = queryFactory
+                .update(member)
+                .set(member.age, member.age.add(1))
+                .execute();
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .fetch();
+
+        for(Member member : result){
+            System.out.println("member = " + member);
+        }
+    }
+
+    @Test
+    @Commit
+    public void bulkDelete(){
+        long count = queryFactory
+                .delete(member)
+                .where(member.age.lt(18))
+                .execute();
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .fetch();
+
+        for(Member member : result){
+            System.out.println("member = " + member);
+        }
+    }
+
+
 
 }
