@@ -677,5 +677,36 @@ public class QuerydslBasicTest {
     }
 
 
+    @Test
+    public void sqlFunction(){
+        List<String> result = queryFactory
+                .select(Expressions.stringTemplate(
+                        "function('replace',{0},{1},{2})",
+                        member.username, "member", "m"))
+                .from(member)
+                .fetch();
+
+        for (String s : result){
+            System.out.println("s = " + s);
+        }
+
+
+    }
+
+    @Test
+    public void sqlFunction2(){
+        List<String> result = queryFactory
+                .select(member.username)
+                .from(member)
+                .where(member.username.eq(member.username.lower()))
+                //.where(member.username.eq(
+                //Expressions.stringTemplate("function('lower',{0})", member.username)))
+                .fetch();
+
+        for (String s : result){
+            System.out.println("s = " + s);
+        }
+
+    }
 
 }
