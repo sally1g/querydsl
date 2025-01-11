@@ -23,17 +23,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.Commit;
-import study.querydsl.dto.MemberDto;
-import study.querydsl.dto.QMemberDto;
-import study.querydsl.dto.UserDto;
+import study.querydsl.dto.*;
 import study.querydsl.entity.Member;
 import study.querydsl.entity.QMember;
 import study.querydsl.entity.QTeam;
 import study.querydsl.entity.Team;
+import study.querydsl.repository.MemberJpaRepository;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.util.StringUtils.hasText;
 import static study.querydsl.entity.QMember.*;
 import static study.querydsl.entity.QTeam.team;
 
@@ -45,6 +45,8 @@ public class QuerydslBasicTest {
     EntityManager em;
 
     JPAQueryFactory queryFactory;
+    @Autowired
+    private MemberJpaRepository memberJpaRepository;
 
     @BeforeEach
     public void before(){
@@ -64,6 +66,16 @@ public class QuerydslBasicTest {
         em.persist(member2);
         em.persist(member3);
         em.persist(member4);
+
+
+        MemberSearchCondition condition = new MemberSearchCondition();
+        condition.setAgeLoe(40);
+        condition.setAgeGoe(35);
+        condition.setTeamName("teatB");
+
+        List<MemberTeamDto> result = memberJpaRepository.search(condition);
+
+        assertThat(result).extracting("username").containsExactly("member4");
 
         //초기화
         em.flush();
@@ -598,11 +610,16 @@ public class QuerydslBasicTest {
     }
 
     private BooleanExpression usernameEq(String usernameCond) {
-        if(usernameCond == null){
+        return hasText(usernameCond) ? member.username.eq(usernameCond) : null;
+       /* if(usernameCond == null){
             return null;
         }else{
             return member.username.eq(usernameCond);
-        }
+        }*//* if(usernameCond == null){
+            return null;
+        }else{
+            return member.username.eq(usernameCond);
+        }*/
 
     }
 
@@ -708,5 +725,8 @@ public class QuerydslBasicTest {
         }
 
     }
+
+
+
 
 }
